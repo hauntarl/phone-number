@@ -64,10 +64,10 @@ func Number(inp string) (string, error) {
 
 // Format will format the given phone number in a generic form,
 // it works on the assumption that the input is normalized.
-func Format(num string) string {
-	num, err := Number(num)
+func Format(inp string) string {
+	num, err := Number(inp)
 	if err != nil {
-		return fmt.Sprintf("INVALID: %s", num)
+		return fmt.Sprintf("%-20s, INVALID: %v", inp, err)
 	}
 	return fmt.Sprintf("(%v) %v-%v", num[:3], num[3:6], num[6:])
 }
