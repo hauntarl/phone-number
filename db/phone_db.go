@@ -21,10 +21,12 @@ var db *sql.DB
 // Open creates a new sqlite database file, returns the pointer to database.
 func Open() (err error) {
 	defer func() {
-		if err == nil {
-			abs, _ := filepath.Abs(dbName)
-			log.Printf("Database Created: (location=%v)", abs)
+		if err != nil {
+			return
 		}
+
+		abs, _ := filepath.Abs(dbName)
+		log.Printf("Database Created: (location=%v)", abs)
 	}()
 
 	f, err := os.Create(dbName)
@@ -51,32 +53,45 @@ func CreateTable() (err error) {
 		}
 	}()
 
-	stmt := fmt.Sprintf(`
+	query := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS %s (
 		uid INTEGER PRIMARY KEY AUTOINCREMENT,
 		number VARCHAR(255)
 	)`, tableName)
-	_, err = db.Exec(stmt)
+	_, err = db.Exec(query)
 	return
 }
 
-// InsertNumber inserts given phone number into database and returns uid
+// InsertNumber inserts given phone number into database and returns uid.
 func InsertNumber(value string) (uid int64, err error) {
-	defer func() {
-		if err == nil {
-			log.Printf("Inserted '%v': (uid=%v)", value, uid)
-		}
-	}()
-
-	stmt := fmt.Sprintf(`INSERT INTO %s(number) values(?)`, tableName)
-	res, err := db.Exec(stmt, value)
+	query := fmt.Sprintf(`INSERT INTO %s(number) values(?)`, tableName)
+	res, err := db.Exec(query, value)
 	if err != nil {
 		return
 	}
 
+	defer func() {
+		if err != nil {
+			return
+		}
+
+		count, _ := res.RowsAffected()
+		log.Printf(
+			"Inserted %-20v: (uid=%-3d, rows affected=%v)",
+			value, uid, count,
+		)
+	}()
 	return res.LastInsertId()
 }
 
+// SelectOne queries a single row from database based on given uid.
+func SelectOne(uid int64) (phn PhoneNumber, err error) {
+	stmt := fmt.Sprintf("SELECT * FROM %s WHERE uid=?", tableName)
+	err = db.QueryRow(stmt, uid).Scan(&phn.Uid, &phn.Val)
+	return
+}
+
+// SelectAll fetches all the rows from phone_numbers table.
 func SelectAll() ([]PhoneNumber, error) {
 	stmt := fmt.Sprintf("SELECT * FROM %s", tableName)
 	rows, err := db.Query(stmt)
@@ -101,16 +116,10 @@ func SelectAll() ([]PhoneNumber, error) {
 
 // PhoneNumber is Go representation for phone_number table in database.
 type PhoneNumber struct {
-	uid int64
-	num string
+	Uid int64
+	Val string
 }
 
-// Uid simply returns the generated uid in database for given number.
-func (pn PhoneNumber) Uid() int64 { return pn.uid }
-
-// Generic displays the phone number in "(223) 456-7890" format, works on the
+// Format displays the phone number in "(223) 456-7890" format, works on the
 // assumption that number is normalized.
-func (pn PhoneNumber) Generic() string { return normalize.Format(pn.num) }
-
-// String simply returns the number stored in database as is.
-func (pn PhoneNumber) String() string { return pn.num }
+func (pn PhoneNumber) Format() string { return normalize.Format(pn.Val) }
