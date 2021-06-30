@@ -62,8 +62,7 @@ func Number(inp string) (string, error) {
 	return num, err
 }
 
-// Format will format the given phone number in a generic form,
-// it works on the assumption that the input is normalized.
+// Format will format the given phone number in a generic form.
 func Format(inp string) string {
 	num, err := Number(inp)
 	if err != nil {

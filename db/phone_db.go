@@ -189,6 +189,5 @@ type PhoneNumber struct {
 	Val string
 }
 
-// Format displays the phone number in "(223) 456-7890" format, works on the
-// assumption that number is normalized.
+// Format displays the phone number in "(223) 456-7890" format.
 func (pn PhoneNumber) Format() string { return normalize.Format(pn.Val) }
