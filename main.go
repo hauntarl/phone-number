@@ -9,41 +9,52 @@ import (
 )
 
 func main() {
-	check(db.Open())
+	// 1. initialize database
+	must(db.Open())
 	defer db.Close()
-
-	check(db.CreateTable())
-
-	rand.Shuffle(len(numbers), func(i, j int) {
-		numbers[i], numbers[j] = numbers[j], numbers[i]
-	})
-	for _, num := range numbers {
-		insert(num)
-	}
-
+	// 2. add phone_numbers table
+	must(db.CreateTable())
+	// 3. insert list of numbers in random order
+	must(insert())
+	// 4. display all the inserted numbers
 	nums, err := db.SelectAll()
-	check(err)
-	display(nums)
-}
-
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
+	must(err)
+	fmt.Println("Phone Numbers Table...")
+	for _, phn := range nums {
+		fmt.Printf("uid: %3d, number: '%v'\n", phn.Uid, phn.Val)
 	}
-}
-
-func insert(number string) {
-	_, err := db.InsertNumber(number)
-	check(err)
-}
-
-func display(nums []db.PhoneNumber) {
-	fmt.Println("-------------------")
+	fmt.Printf("total rows: %v\n", len(nums))
+	fmt.Println("----------------------")
+	// 5. normalize the phone numbers
+	must(db.Normalize(nums))
+	// 6. display all the numbers in a generic format after normalization
+	nums, err = db.SelectAll()
+	must(err)
+	fmt.Println("Formatted Numbers...")
 	for _, phn := range nums {
 		fmt.Printf("uid: %3d, number: '%v'\n", phn.Uid, phn.Format())
 	}
 	fmt.Printf("total rows: %v\n", len(nums))
-	fmt.Println("-------------------")
+	fmt.Println("--------------------")
+}
+
+func insert() error {
+	rand.Shuffle(len(numbers), func(i, j int) {
+		numbers[i], numbers[j] = numbers[j], numbers[i]
+	})
+	for _, val := range numbers {
+		_, err := db.InsertNumber(val)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func must(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 var numbers = [...]string{
